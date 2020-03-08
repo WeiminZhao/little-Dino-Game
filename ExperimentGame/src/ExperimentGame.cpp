@@ -39,10 +39,12 @@ paint::font fntgodesc("press space to next round",100/3,{400});//create new font
 
 int main() {
 	::ShowWindow(::GetConsoleWindow(),SW_HIDE);//hide console
-	time_t fpstime=chrono::system_clock::to_time_t(chrono::system_clock::now());//get the time since epoch for fps counting
+
+	auto fpstime=chrono::steady_clock::now();//get the time since epoch for fps counting
 	int fps=0;
 	int printfps=0;
-	clock_t cfps=clock();//fps controller
+	auto cfps=chrono::steady_clock::now();//fps controller for calculation update and render
+
 	srand(time(NULL));//this is to make rand() actually look like random
 
 	bool iniscreen=true;//when player first enter the game, indicate that on the first description screen
@@ -74,15 +76,11 @@ int main() {
 	std::thread T([&]{
 		srand(time(NULL));//this is to make rand() actually look like random
 		while(true){
-			//fps++;//for fps conting
-			//cfps++;
-			///if(cfps>=3000)
-			if(((clock()-cfps)/(double)CLOCKS_PER_SEC)>=(0.017))//here we control the fps of the game, normally be 0.017(60fps)
+
+			if(chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now()-cfps).count()>=16)//update control for calculations/rendering, 16ms ~= 60 updates/sec
 			{
-				//std::this_thread::sleep_for(std::chrono::milliseconds(10));//sleep method for fps control
 				///cout<<"IR "<<isReseting<<endl;//for testing
-				fps++;//real fps counter
-				cfps=clock();
+				cfps=chrono::steady_clock::now();//clock();
 				if(!isReseting)//normal progressing the game
 				{
 					//if(!iniscreen){//if this is the first initializing(on the description screen), pause the game
@@ -94,7 +92,7 @@ int main() {
 					//}
 					//}
 
-					API::refresh_window(fm);//refresh the graphic paint
+
 				}
 				if(isReseting)//when isReseting set to true, we do the reset job here
 				{
@@ -105,6 +103,9 @@ int main() {
 					envir.setGroundPos(envir.returnYSize()*3/4+dino.returnYSize()*pixelStretch/2);//re-setup the initial ground altittude
 					isReseting=false;///after reset & clean we set this again to false for normal progress
 				}
+
+				fps++;
+				API::refresh_window(fm);//refresh the graphic paint
 
 			}
 
@@ -118,16 +119,17 @@ int main() {
 	dw.draw([&dino,&envir,&fps,&fpstime,&printfps,&anys,&iniscreen](paint::graphics &graph) {//here we preset the method about all elements need to be paint, and set all the variable to control the paint process
 
 		graph.rectangle({0,0,windowSizeX,windowSizeY},true,colors::bisque);//set the background color
-		if(chrono::system_clock::to_time_t(chrono::system_clock::now())-fpstime>=1)//for fps counting
+		//if(chrono::system_clock::to_time_t(chrono::system_clock::now())-fpstime>=1)//for fps counting
+		if(chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now()-fpstime).count()>=(1000))
 		{
-			fpstime=chrono::system_clock::to_time_t(chrono::system_clock::now());
+			fpstime=chrono::steady_clock::now();//chrono::system_clock::to_time_t(chrono::system_clock::now());
 			printfps=fps;
 			fps=0;
 		}
 
 		graph.typeface(fpsfnt);
 		graph.string({100,0},to_string(printfps),colors::blue_violet);//print fps
-		graph.string({30,0},"vr. 0.06",colors::blue_violet);//print version no.
+		graph.string({30,0},"vr. 0.08",colors::blue_violet);//print version no.
 		//delete fpsfnt;//delete it after used
 
 
